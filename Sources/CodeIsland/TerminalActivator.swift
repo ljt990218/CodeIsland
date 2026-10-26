@@ -156,6 +156,19 @@ struct TerminalActivator {
         // no cwd or no matching window, so this never regresses single-window apps.
         if let bundleId = session.termBundleId,
            nativeAppBundles[bundleId] != nil {
+            // Desktop cards use codexapp:<UUID> internally. Discovery, hooks and
+            // app-server events retain the raw thread UUID in providerSessionId.
+            // Let Codex navigate and restore its window through the deep link.
+            if bundleId == AppState.codexAppBundleId,
+               session.isNativeAppMode,
+               let threadId = session.providerSessionId,
+               UUID(uuidString: threadId) != nil,
+               let url = URL(string: "codex://threads/\(threadId)"),
+               NSWorkspace.shared.open(url) {
+                // Submission is not confirmation that the target thread is visible.
+                // The caller's existing jump feedback remains responsible for visibility.
+                return
+            }
             activateIDEWindow(bundleId: bundleId, cwd: session.cwd)
             return
         }
